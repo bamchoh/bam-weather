@@ -230,5 +230,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
-	tweet(generateForecast(today.Weather, yesterday.TempL, today.TempH))
+	text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
+	tweet(text)
+	toot(text)
 }

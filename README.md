@@ -11,10 +11,15 @@ set 2 key/secret pare in main package as const variables
 package main
 
 const (
-	ConsumerKey    = "XXXXXXXXXXXXXXXXXXXX"
-	ConsumerSecret = "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY"
-	APIKey         = "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
-	APISecret      = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+	ConsumerKey    = "XXXX"
+	ConsumerSecret = "YYYY"
+	APIKey         = "ZZZZ"
+	APISecret      = "AAAA"
+	ClientID       = "BBBB"
+	ClientSecret   = "CCCC"
+	MastodonServer = "https://mstdn.jp"
+	MastodonUser   = "DDDD"
+	MastodonPass   = "EEEE"
 )
 ```
 
