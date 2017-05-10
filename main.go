@@ -244,21 +244,19 @@ func main() {
 
 	log.SetOutput(logFile)
 
-	for i := 0; i < 365; i++ {
-		today, err := getDayInfo(time.Duration(0 - i))
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(-1)
-		}
-		yesterday, err := getDayInfo(time.Duration(-1 - i))
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(-1)
-		}
-		log.Println(today.Weather)
-		text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
-		log.Println("Text:", text)
-		tweet(text)
-		toot(text)
+	today, err := getDayInfo(time.Duration(0))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
 	}
+	yesterday, err := getDayInfo(time.Duration(-1))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+	log.Println(today.Weather)
+	text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
+	log.Println("Text:", text)
+	tweet(text)
+	toot(text)
 }
