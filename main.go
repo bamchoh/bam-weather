@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -53,6 +54,7 @@ type WeatherForecastPart struct {
 	Sentence  string
 	Base      Base
 	Temporary Temporary
+	Becoming  Temporary
 	SubArea   SubArea
 }
 
@@ -112,7 +114,7 @@ func ModifySentence(s string) string {
 	s = strings.Replace(s, "では", "らへんは", -1)
 	s = strings.Replace(s, "所により", "どっかでは", -1)
 	s = strings.Replace(s, "海上", "海のほう", -1)
-	s = strings.Replace(s, "夜遅く", "夜遅くに", -1)
+	s = strings.Replace(s, "夜遅く", "夜遅ぉに", -1)
 	s = strings.Replace(s, "夜のはじめ頃", "夜に", -1)
 	s = strings.Replace(s, "晴れ", "\xE2\x98\x80", -1)
 	s = strings.Replace(s, "雨", "\xE2\x98\x94", -1)
@@ -189,13 +191,26 @@ func getWeatherReport(path string) (*DayInfo, error) {
 func generateForecast(wf WeatherForecastPart, tempL, tempH string) string {
 	report := ""
 	report += ModifySentence(wf.Base.Weather.Text)
-	report += ModifySentence("や。")
+
+	if wf.Temporary.TimeModifier != "時々" {
+		report += ModifySentence("や。")
+	}
+
 	if wf.Temporary.TimeModifier != "" {
 		report += ModifySentence(wf.Temporary.TimeModifier)
 		if !strings.Contains(wf.Temporary.TimeModifier, "時々") {
 			report += ModifySentence("は")
 		}
 		report += ModifySentence(wf.Temporary.Weather.Text)
+		report += ModifySentence("や。")
+	}
+
+	if wf.Becoming.TimeModifier != "" {
+		report += ModifySentence(wf.Becoming.TimeModifier)
+		if !strings.Contains(wf.Becoming.TimeModifier, "時々") {
+			report += ModifySentence("は")
+		}
+		report += ModifySentence(wf.Becoming.Weather.Text)
 		report += ModifySentence("や。")
 	}
 	if wf.SubArea.Sentence != "" {
@@ -220,17 +235,30 @@ func getDayInfo(day time.Duration) (*DayInfo, error) {
 }
 
 func main() {
-	today, err := getDayInfo(time.Duration(0))
+	logFile, err := os.Create("bam-weather.log")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
-	yesterday, err := getDayInfo(time.Duration(-1))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+	defer logFile.Close()
+
+	log.SetOutput(logFile)
+
+	for i := 0; i < 365; i++ {
+		today, err := getDayInfo(time.Duration(0 - i))
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(-1)
+		}
+		yesterday, err := getDayInfo(time.Duration(-1 - i))
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(-1)
+		}
+		log.Println(today.Weather)
+		text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
+		log.Println("Text:", text)
+		tweet(text)
+		toot(text)
 	}
-	text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
-	tweet(text)
-	toot(text)
 }

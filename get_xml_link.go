@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -29,6 +30,8 @@ func getXMLLink(day time.Duration) (string, error) {
 	v.Add("datetime", now+" 07:00:00")
 	apiURL := `http://api.aitc.jp/jmardb-api/search`
 	fetchURL := apiURL + "?" + v.Encode()
+
+	log.Println("Fetch URL:", fetchURL)
 
 	resp, err := http.Get(fetchURL)
 	if err != nil {
