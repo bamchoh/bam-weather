@@ -36,11 +36,7 @@ type Weather struct {
 	Text string `xml:",chardata"`
 }
 
-type Base struct {
-	Weather Weather `xml:"http://xml.kishou.go.jp/jmaxml1/elementBasis1/ Weather"`
-}
-
-type Temporary struct {
+type WeatherInfo struct {
 	TimeModifier string
 	Weather      Weather `xml:"http://xml.kishou.go.jp/jmaxml1/elementBasis1/ Weather"`
 }
@@ -52,9 +48,9 @@ type SubArea struct {
 type WeatherForecastPart struct {
 	ID        string `xml:"refID,attr"`
 	Sentence  string
-	Base      Base
-	Temporary Temporary
-	Becoming  Temporary
+	Base      WeatherInfo
+	Temporary []WeatherInfo
+	Becoming  []WeatherInfo
 	SubArea   SubArea
 }
 
@@ -188,31 +184,38 @@ func getWeatherReport(path string) (*DayInfo, error) {
 	return &di, nil
 }
 
+func (t WeatherInfo) Exists(searchText []string) bool {
+	for _, text := range searchText {
+		if strings.Contains(t.TimeModifier, text) {
+			return true
+		}
+	}
+	return false
+}
+
 func generateForecast(wf WeatherForecastPart, tempL, tempH string) string {
+	var ws []WeatherInfo
+
+	ws = append(ws, wf.Base)
+	ws = append(ws, wf.Temporary...)
+	ws = append(ws, wf.Becoming...)
+
+	searchText := []string{"時々", "後"}
 	report := ""
-	report += ModifySentence(wf.Base.Weather.Text)
-
-	if wf.Temporary.TimeModifier != "時々" {
-		report += ModifySentence("や。")
-	}
-
-	if wf.Temporary.TimeModifier != "" {
-		report += ModifySentence(wf.Temporary.TimeModifier)
-		if !strings.Contains(wf.Temporary.TimeModifier, "時々") {
-			report += ModifySentence("は")
+	for _, w := range ws {
+		if w.TimeModifier != "" {
+			if !w.Exists(searchText) {
+				report += ModifySentence("や。")
+			}
+			report += ModifySentence(w.TimeModifier)
+			if !w.Exists(searchText) {
+				report += ModifySentence("は")
+			}
 		}
-		report += ModifySentence(wf.Temporary.Weather.Text)
-		report += ModifySentence("や。")
+		report += ModifySentence(w.Weather.Text)
 	}
+	report += ModifySentence("や。")
 
-	if wf.Becoming.TimeModifier != "" {
-		report += ModifySentence(wf.Becoming.TimeModifier)
-		if !strings.Contains(wf.Becoming.TimeModifier, "時々") {
-			report += ModifySentence("は")
-		}
-		report += ModifySentence(wf.Becoming.Weather.Text)
-		report += ModifySentence("や。")
-	}
 	if wf.SubArea.Sentence != "" {
 		report += ModifySentence("なんか")
 		report += ModifySentence(wf.SubArea.Sentence)
