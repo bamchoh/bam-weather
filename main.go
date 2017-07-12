@@ -106,12 +106,12 @@ func ModifySentence(s string) string {
 	s = strings.Replace(s, "非常に", "めっちゃ", -1)
 	s = strings.Replace(s, "激しく", "ぎょーさん", -1)
 	s = strings.Replace(s, "山地", "山のほう", -1)
-	s = strings.Replace(s, "未明", "夜おそーに", -1)
+	s = strings.Replace(s, "未明", "夜おそぉに", -1)
 	s = strings.Replace(s, "では", "らへんは", -1)
 	s = strings.Replace(s, "所により", "どっかでは", -1)
 	s = strings.Replace(s, "海上", "海のほう", -1)
-	s = strings.Replace(s, "夜遅く", "夜遅ぉに", -1)
-	s = strings.Replace(s, "夜のはじめ頃", "夜に", -1)
+	s = strings.Replace(s, "夜遅く", "夜おそぉ", -1)
+	s = strings.Replace(s, "夜のはじめ頃", "会社から退社する頃", -1)
 	s = strings.Replace(s, "晴れ", "\xE2\x98\x80", -1)
 	s = strings.Replace(s, "雨", "\xE2\x98\x94", -1)
 	s = strings.Replace(s, "雪", "\xE2\x9B\x84", -1)
@@ -224,7 +224,8 @@ func generateForecast(wf WeatherForecastPart, tempL, tempH string) string {
 
 	lowest := "いっちゃん低い温度は " + tempL
 	highest := "いっちゃん高い温度は " + tempH + "やで"
-	report = fmt.Sprintf("大阪の今日の天気は基本%s\n%s\n%s", report, lowest, highest)
+
+	report = fmt.Sprintf("大阪の今日(%s)の天気は基本%s\n%s\n%s", time.Now().Format("1月2日"), report, lowest, highest)
 	return report
 }
 
