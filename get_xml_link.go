@@ -44,5 +44,5 @@ func getXMLLink(day time.Duration) (string, error) {
 	if err := dec.Decode(&d); err != nil {
 		return "", err
 	}
-	return d.Data[0].Link, nil
+	return d.Data[len(d.Data)-1].Link, nil
 }
