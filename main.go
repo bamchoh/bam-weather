@@ -239,7 +239,8 @@ func getDayInfo(day time.Duration) (*DayInfo, error) {
 }
 
 func main() {
-	logFile, err := os.Create("bam-weather.log")
+	var err error
+	logFile := os.Stdout
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
