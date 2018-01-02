@@ -27,3 +27,11 @@ const (
 $ go build
 $ bam-weather
 ```
+
+# Build for AWS lambda
+
+Execute ./build.sh on macos
+
+```
+$ ./build.sh
+```
