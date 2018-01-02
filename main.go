@@ -263,5 +263,4 @@ func main() {
 	text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
 	log.Println("Text:", text)
 	tweet(text)
-	toot(text)
 }
