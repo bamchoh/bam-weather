@@ -1,0 +1,3 @@
+GOOS=linux GOARCH=amd64 go build -o bam-weather
+zip archive.zip index.js bam-weather
+
