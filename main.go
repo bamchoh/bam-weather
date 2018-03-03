@@ -224,8 +224,9 @@ func generateForecast(wf WeatherForecastPart, tempL, tempH string) string {
 
 	lowest := "いっちゃん低い温度は " + tempL
 	highest := "いっちゃん高い温度は " + tempH + "やで"
+	tag := "#bam-weather"
 
-	report = fmt.Sprintf("大阪の今日(%s)の天気は基本%s\n%s\n%s", time.Now().Format("1月2日"), report, lowest, highest)
+	report = fmt.Sprintf("大阪の今日(%s)の天気は基本%s\n%s\n%s\n%s", time.Now().Format("1月2日"), report, lowest, highest, tag)
 	return report
 }
 
