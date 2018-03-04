@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/pkg/errors"
 )
 
 type Control struct {
@@ -224,7 +227,7 @@ func generateForecast(wf WeatherForecastPart, tempL, tempH string) string {
 
 	lowest := "いっちゃん低い温度は " + tempL
 	highest := "いっちゃん高い温度は " + tempH + "やで"
-	tag := "#bam-weather"
+	tag := "#bam_weather"
 
 	report = fmt.Sprintf("大阪の今日(%s)の天気は基本%s\n%s\n%s\n%s", time.Now().Format("1月2日"), report, lowest, highest, tag)
 	return report
@@ -239,12 +242,11 @@ func getDayInfo(day time.Duration) (*DayInfo, error) {
 	return getWeatherReport(link)
 }
 
-func main() {
+func run() error {
 	var err error
 	logFile := os.Stdout
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+		return errors.Wrap(err, "failed to open log file")
 	}
 	defer logFile.Close()
 
@@ -252,16 +254,20 @@ func main() {
 
 	today, err := getDayInfo(time.Duration(0))
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+		return errors.Wrap(err, "failed to get today info")
 	}
 	yesterday, err := getDayInfo(time.Duration(-1))
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+		return errors.Wrap(err, "failed to get yesterday info")
 	}
 	log.Println(today.Weather)
 	text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
 	log.Println("Text:", text)
 	tweet(text)
+
+	return nil
+}
+
+func main() {
+	lambda.Start(run)
 }
