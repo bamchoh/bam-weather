@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"log"
@@ -11,6 +12,9 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/bamchoh/bam-weather/genindex"
+	"github.com/bamchoh/bam-weather/genpng"
+	"github.com/bamchoh/bam-weather/mys3"
 	"github.com/pkg/errors"
 )
 
@@ -248,7 +252,6 @@ func run() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to open log file")
 	}
-	defer logFile.Close()
 
 	log.SetOutput(logFile)
 
@@ -261,7 +264,41 @@ func run() error {
 		return errors.Wrap(err, "failed to get yesterday info")
 	}
 	log.Println(today.Weather)
+
+	info := genpng.WeatherInfo{
+		First: today.Weather.Base.Weather.Text,
+		Low:   strings.Replace(yesterday.TempL, "度", "", -1),
+		High:  strings.Replace(today.TempH, "度", "", -1),
+	}
+
+	bucket := "bam-weather"
+	region := "ap-northeast-1"
+
+	var buffer *bytes.Buffer
+	buffer = bytes.NewBuffer(make([]byte, 0))
+	err = genpng.Generate(info, buffer)
+	if err != nil {
+		return err
+	}
+
+	err = mys3.Upload(bucket, region, "weather.png", "binary/octet-stream", buffer)
+	if err != nil {
+		return err
+	}
+
+	buffer = bytes.NewBuffer(make([]byte, 0))
+	err = genindex.Generate(buffer)
+	if err != nil {
+		return err
+	}
+
+	err = mys3.Upload(bucket, region, "index.html", "text/html", buffer)
+	if err != nil {
+		return err
+	}
+
 	text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
+	text += "\n" + "https://s3-ap-northeast-1.amazonaws.com/bam-weather/index.html"
 	log.Println("Text:", text)
 	tweet(text)
 
