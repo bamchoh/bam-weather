@@ -298,7 +298,7 @@ func run() error {
 	}
 
 	text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
-	text += "\n" + "https://s3-ap-northeast-1.amazonaws.com/bam-weather/index.html"
+	text += fmt.Sprintf("\nhttps://s3-ap-northeast-1.amazonaws.com/bam-weather/index.html?%d", time.Now().Unix())
 	log.Println("Text:", text)
 	tweet(text)
 
