@@ -237,13 +237,41 @@ func generateForecast(wf WeatherForecastPart, tempL, tempH string) string {
 	return report
 }
 
-func getDayInfo(day time.Duration) (*DayInfo, error) {
+func getDayInfo(day time.Time) (*DayInfo, error) {
 	link, err := getXMLLink(day)
 	if err != nil {
 		return nil, err
 	}
 
 	return getWeatherReport(link)
+}
+
+func genWeatherInfo(today, yesterday *DayInfo) genpng.WeatherInfo {
+	bases := strings.Split(today.Weather.Base.Weather.Text, " ")
+
+	info := genpng.WeatherInfo{
+		First: bases[0],
+		Low:   strings.Replace(yesterday.TempL, "度", "", -1),
+		High:  strings.Replace(today.TempH, "度", "", -1),
+	}
+
+	switch {
+	case len(bases) > 2:
+		info.Second = bases[1]
+		info.Third = bases[2]
+	case len(today.Weather.Becoming) > 0:
+		bec := today.Weather.Becoming[0]
+		mod := bec.TimeModifier
+		switch mod {
+		case "後", "時々":
+			info.Second = mod
+		default:
+			info.Second = "後"
+		}
+		info.Third = today.Weather.Becoming[0].Weather.Text
+	}
+
+	return info
 }
 
 func run() error {
@@ -255,21 +283,24 @@ func run() error {
 
 	log.SetOutput(logFile)
 
-	today, err := getDayInfo(time.Duration(0))
+	tt := time.Now()
+	// For debug
+	// loc, err := time.LoadLocation("Local")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// tt := time.Date(2018, 3, 1, 7, 0, 0, 0, loc)
+	today, err := getDayInfo(tt)
 	if err != nil {
 		return errors.Wrap(err, "failed to get today info")
 	}
-	yesterday, err := getDayInfo(time.Duration(-1))
+	yesterday, err := getDayInfo(tt.Add(-24 * time.Hour))
 	if err != nil {
 		return errors.Wrap(err, "failed to get yesterday info")
 	}
 	log.Println(today.Weather)
 
-	info := genpng.WeatherInfo{
-		First: today.Weather.Base.Weather.Text,
-		Low:   strings.Replace(yesterday.TempL, "度", "", -1),
-		High:  strings.Replace(today.TempH, "度", "", -1),
-	}
+	info := genWeatherInfo(today, yesterday)
 
 	bucket := "bam-weather"
 	region := "ap-northeast-1"

@@ -21,8 +21,8 @@ type JmardbAPI struct {
 	Data []APIData
 }
 
-func getXMLLink(day time.Duration) (string, error) {
-	now := (time.Now().Add(day * 24 * time.Hour)).Format("2006-01-02")
+func getXMLLink(day time.Time) (string, error) {
+	now := day.Format("2006-01-02")
 	v := url.Values{}
 	v.Set("title", "府県天気予報")
 	v.Add("areacode_mete", "270000")
