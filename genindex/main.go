@@ -7,13 +7,12 @@ import (
 	"time"
 )
 
-func today() string {
+func dayString(day time.Time) string {
 	wdays := []string{"日", "月", "火", "水", "木", "金", "土"}
-	now := time.Now()
-	return fmt.Sprintf("%d月%d日(%s)", now.Month(), now.Day(), wdays[now.Weekday()])
+	return fmt.Sprintf("%d月%d日(%s)", day.Month(), day.Day(), wdays[day.Weekday()])
 }
 
-func Generate(f io.Writer) error {
+func Generate(f io.Writer, day time.Time) error {
 	const html = `<!DOCTYPE html>
 <html>
   <head>
@@ -38,7 +37,7 @@ func Generate(f io.Writer) error {
 		Today  string
 		Serial int64
 	}{
-		Today:  today(),
+		Today:  dayString(day),
 		Serial: time.Now().Unix(),
 	})
 	return err

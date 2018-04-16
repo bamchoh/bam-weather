@@ -2,12 +2,9 @@ package main
 
 import (
 	"bytes"
-	"encoding/xml"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +13,11 @@ import (
 	"github.com/bamchoh/bam-weather/genpng"
 	"github.com/bamchoh/bam-weather/mys3"
 	"github.com/pkg/errors"
+)
+
+var (
+	DEBUG    = false
+	indexURL = "https://s3-ap-northeast-1.amazonaws.com/bam-weather/index.html"
 )
 
 type Control struct {
@@ -133,64 +135,6 @@ type DayInfo struct {
 	TempH   string
 }
 
-func getWeatherReport(path string) (*DayInfo, error) {
-	resp, err := http.Get(path)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	dec := xml.NewDecoder(resp.Body)
-	var v Report
-	if err := dec.Decode(&v); err != nil {
-		return nil, err
-	}
-
-	var di DayInfo
-	if len(v.Body.MeteorologicalInfos) > 0 {
-		info := v.Body.MeteorologicalInfos[0]
-		if len(info.Items) > 0 {
-			item := info.Items[0]
-			if len(item.Kinds) > 0 {
-				kind := item.Kinds[0]
-				if len(kind.WeatherForecasts) > 0 {
-					for _, w := range kind.WeatherForecasts {
-						if w.ID == "1" {
-							di.Weather = w
-							break
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if len(v.Body.MeteorologicalInfos) > 0 {
-		for _, info := range v.Body.MeteorologicalInfos {
-			if info.Type == "地点予報" {
-				for _, def := range info.TimeDefines {
-					switch def.Name {
-					case "明日朝":
-						id, err := strconv.Atoi(def.ID)
-						if err != nil {
-							return nil, err
-						}
-						di.TempL = info.Items[0].Kinds[id-1].TemperaturePart.Temperature.Description
-					case "今日日中":
-						id, err := strconv.Atoi(def.ID)
-						if err != nil {
-							return nil, err
-						}
-						di.TempH = info.Items[0].Kinds[id-1].TemperaturePart.Temperature.Description
-					}
-				}
-				break
-			}
-		}
-	}
-	return &di, nil
-}
-
 func (t WeatherInfo) Exists(searchText []string) bool {
 	for _, text := range searchText {
 		if strings.Contains(t.TimeModifier, text) {
@@ -200,7 +144,35 @@ func (t WeatherInfo) Exists(searchText []string) bool {
 	return false
 }
 
-func generateForecast(wf WeatherForecastPart, tempL, tempH string) string {
+func genWeatherInfo(day *DayInfo, templ, temph string) genpng.WeatherInfo {
+	bases := strings.Split(day.Weather.Base.Weather.Text, " ")
+
+	info := genpng.WeatherInfo{
+		First: bases[0],
+		Low:   strings.Replace(templ, "度", "", -1),
+		High:  strings.Replace(temph, "度", "", -1),
+	}
+
+	switch {
+	case len(bases) > 2:
+		info.Second = bases[1]
+		info.Third = bases[2]
+	case len(day.Weather.Becoming) > 0:
+		bec := day.Weather.Becoming[0]
+		mod := bec.TimeModifier
+		switch mod {
+		case "後", "時々":
+			info.Second = mod
+		default:
+			info.Second = "後"
+		}
+		info.Third = day.Weather.Becoming[0].Weather.Text
+	}
+
+	return info
+}
+
+func generateForecast(wf WeatherForecastPart, tempL, tempH, when string) string {
 	var ws []WeatherInfo
 
 	ws = append(ws, wf.Base)
@@ -233,74 +205,87 @@ func generateForecast(wf WeatherForecastPart, tempL, tempH string) string {
 	highest := "いっちゃん高い温度は " + tempH + "やで"
 	tag := "#bam_weather"
 
-	report = fmt.Sprintf("大阪の今日(%s)の天気は基本%s\n%s\n%s\n%s", time.Now().Format("1月2日"), report, lowest, highest, tag)
+	report = fmt.Sprintf("大阪の%sの天気は基本%s\n%s\n%s\n%s", when, report, lowest, highest, tag)
 	return report
 }
 
-func getDayInfo(day time.Time) (*DayInfo, error) {
-	link, err := getXMLLink(day)
-	if err != nil {
-		return nil, err
-	}
-
-	return getWeatherReport(link)
+type WeatherGenerator interface {
+	Init() error
+	Text() string
+	WeatherInfo() genpng.WeatherInfo
+	Day() time.Time
 }
 
-func genWeatherInfo(today, yesterday *DayInfo) genpng.WeatherInfo {
-	bases := strings.Split(today.Weather.Base.Weather.Text, " ")
-
-	info := genpng.WeatherInfo{
-		First: bases[0],
-		Low:   strings.Replace(yesterday.TempL, "度", "", -1),
-		High:  strings.Replace(today.TempH, "度", "", -1),
-	}
-
-	switch {
-	case len(bases) > 2:
-		info.Second = bases[1]
-		info.Third = bases[2]
-	case len(today.Weather.Becoming) > 0:
-		bec := today.Weather.Becoming[0]
-		mod := bec.TimeModifier
-		switch mod {
-		case "後", "時々":
-			info.Second = mod
-		default:
-			info.Second = "後"
-		}
-		info.Third = today.Weather.Becoming[0].Weather.Text
-	}
-
-	return info
+type SpecificTime struct {
+	Specify bool `json:"specify"`
+	Hour    int  `json:"hour"`
 }
 
-func run() error {
+func run(event SpecificTime) error {
 	var err error
 	logFile := os.Stdout
 	if err != nil {
-		return errors.Wrap(err, "failed to open log file")
+		err = errors.Wrap(err, "failed to open log file")
+		log.Println(err)
+		return err
 	}
 
 	log.SetOutput(logFile)
 
 	tt := time.Now()
-	// For debug
-	// loc, err := time.LoadLocation("Local")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// tt := time.Date(2018, 3, 1, 7, 0, 0, 0, loc)
-	today, err := getDayInfo(tt)
-	if err != nil {
-		return errors.Wrap(err, "failed to get today info")
+	if event.Specify {
+		loc, err := time.LoadLocation("Local")
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		tt = time.Date(
+			tt.Year(),
+			tt.Month(),
+			tt.Day(),
+			event.Hour,
+			0,
+			0,
+			0,
+			loc)
 	}
-	yesterday, err := getDayInfo(tt.Add(-24 * time.Hour))
-	if err != nil {
-		return errors.Wrap(err, "failed to get yesterday info")
+	if DEBUG {
+		loc, err := time.LoadLocation("Local")
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		// tt = time.Date(2018, 4, 15, 21, 0, 0, 0, loc)
+		tt = time.Date(2018, 4, 16, 6, 30, 0, 0, loc)
 	}
-	log.Println(today.Weather)
 
-	info := genWeatherInfo(today, yesterday)
+	var gen WeatherGenerator
+	if tt.Hour() >= 18 {
+		log.Println("Tomorrow")
+		gen = &TomorrowWeatherGenerator{
+			BaseTime: tt,
+		}
+	} else {
+		log.Println("Today")
+		gen = &TodayWeatherGenerator{
+			BaseTime: tt,
+		}
+	}
+
+	err = gen.Init()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	text := gen.Text()
+	log.Println("Text:", text)
+	if !DEBUG {
+		tweet(text)
+	} else {
+		return nil
+	}
+
+	info := gen.WeatherInfo()
 
 	bucket := "bam-weather"
 	region := "ap-northeast-1"
@@ -309,33 +294,33 @@ func run() error {
 	buffer = bytes.NewBuffer(make([]byte, 0))
 	err = genpng.Generate(info, buffer)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
 	err = mys3.Upload(bucket, region, "weather.png", "binary/octet-stream", buffer)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
 	buffer = bytes.NewBuffer(make([]byte, 0))
-	err = genindex.Generate(buffer)
+	err = genindex.Generate(buffer, gen.Day())
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
 	err = mys3.Upload(bucket, region, "index.html", "text/html", buffer)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
-
-	text := generateForecast(today.Weather, yesterday.TempL, today.TempH)
-	text += fmt.Sprintf("\nhttps://s3-ap-northeast-1.amazonaws.com/bam-weather/index.html?%d", time.Now().Unix())
-	log.Println("Text:", text)
-	tweet(text)
 
 	return nil
 }
 
 func main() {
+	// run()
 	lambda.Start(run)
 }

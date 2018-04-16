@@ -21,13 +21,14 @@ type JmardbAPI struct {
 	Data []APIData
 }
 
-func getXMLLink(day time.Time) (string, error) {
-	now := day.Format("2006-01-02")
+func getXMLLink(sday, eday time.Time) (string, error) {
+	ssday := sday.Format("2006-01-02 15:04:05")
+	seday := eday.Format("2006-01-02 15:04:05")
 	v := url.Values{}
 	v.Set("title", "府県天気予報")
 	v.Add("areacode_mete", "270000")
-	v.Add("datetime", now+" 00:00:00")
-	v.Add("datetime", now+" 07:00:00")
+	v.Add("datetime", ssday)
+	v.Add("datetime", seday)
 	apiURL := `http://api.aitc.jp/jmardb-api/search`
 	fetchURL := apiURL + "?" + v.Encode()
 
