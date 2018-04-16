@@ -218,6 +218,7 @@ type WeatherGenerator interface {
 
 type SpecificTime struct {
 	Specify bool `json:"specify"`
+	Day     int  `json:"day"`
 	Hour    int  `json:"hour"`
 }
 
@@ -242,7 +243,7 @@ func run(event SpecificTime) error {
 		tt = time.Date(
 			tt.Year(),
 			tt.Month(),
-			tt.Day(),
+			event.Day,
 			event.Hour,
 			0,
 			0,

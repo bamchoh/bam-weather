@@ -19,7 +19,7 @@ func Generate(f io.Writer, day time.Time) error {
     <meta charset="utf-8" />
     <meta property="og:title" content="大阪の天気 {{ .Today }}" />
     <meta property="og:type" content="article" />
-    <meta property="og:url" content="https://s3-ap-northeast-1.amazonaws.com/bam-weather/index.html" />
+    <meta property="og:url" content="https://s3-ap-northeast-1.amazonaws.com/bam-weather/index.html?{{ .Serial }}" />
     <meta property="og:image" content="https://s3-ap-northeast-1.amazonaws.com/bam-weather/weather.png?{{ .Serial }}" />
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@bamchoh">
