@@ -97,7 +97,7 @@ func (gen *TomorrowWeatherGenerator) Init() error {
 
 	when := fmt.Sprintf("明日(%s)", gen.Day().Format("1月2日"))
 	gen.text = generateForecast(tomorrow.Weather, tomorrow.TempL, tomorrow.TempH, when)
-	gen.text += fmt.Sprintf("\n%v?%d", indexURL, time.Now().Unix())
+	gen.text += fmt.Sprintf("\n%v?%d", indexURL, gen.BaseTime.Unix())
 
 	gen.weatherInfo = genWeatherInfo(tomorrow, tomorrow.TempL, tomorrow.TempH)
 	return nil

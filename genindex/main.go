@@ -12,7 +12,7 @@ func dayString(day time.Time) string {
 	return fmt.Sprintf("%d月%d日(%s)", day.Month(), day.Day(), wdays[day.Weekday()])
 }
 
-func Generate(f io.Writer, day time.Time) error {
+func Generate(f io.Writer, day time.Time, serial int64) error {
 	const html = `<!DOCTYPE html>
 <html>
   <head>
@@ -38,7 +38,7 @@ func Generate(f io.Writer, day time.Time) error {
 		Serial int64
 	}{
 		Today:  dayString(day),
-		Serial: time.Now().Unix(),
+		Serial: serial,
 	})
 	return err
 }

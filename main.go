@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	DEBUG    = false
 	indexURL = "https://s3-ap-northeast-1.amazonaws.com/bam-weather/index.html"
 )
 
@@ -250,15 +249,6 @@ func run(event SpecificTime) error {
 			0,
 			loc)
 	}
-	if DEBUG {
-		loc, err := time.LoadLocation("Local")
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		// tt = time.Date(2018, 4, 15, 21, 0, 0, 0, loc)
-		tt = time.Date(2018, 4, 16, 6, 30, 0, 0, loc)
-	}
 
 	var gen WeatherGenerator
 	if tt.Hour() >= 18 {
@@ -278,14 +268,6 @@ func run(event SpecificTime) error {
 		log.Println(err)
 		return err
 	}
-	text := gen.Text()
-	log.Println("Text:", text)
-	if !DEBUG {
-		tweet(text)
-	} else {
-		return nil
-	}
-
 	info := gen.WeatherInfo()
 
 	bucket := "bam-weather"
@@ -306,7 +288,7 @@ func run(event SpecificTime) error {
 	}
 
 	buffer = bytes.NewBuffer(make([]byte, 0))
-	err = genindex.Generate(buffer, gen.Day())
+	err = genindex.Generate(buffer, gen.Day(), tt.Unix())
 	if err != nil {
 		log.Println(err)
 		return err
@@ -318,10 +300,13 @@ func run(event SpecificTime) error {
 		return err
 	}
 
+	text := gen.Text()
+	log.Println("Text:", text)
+	tweet(text)
+
 	return nil
 }
 
 func main() {
-	// run()
 	lambda.Start(run)
 }
