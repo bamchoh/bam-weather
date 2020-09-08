@@ -46,7 +46,7 @@ func (gen *TodayWeatherGenerator) Init() error {
 }
 
 func (gen *TodayWeatherGenerator) getDayInfo(sday, eday time.Time) (*DayInfo, error) {
-	link, err := getXMLLink(sday, eday)
+	link, err := getXMLLink2(sday, eday)
 	if err != nil {
 		return nil, err
 	}
